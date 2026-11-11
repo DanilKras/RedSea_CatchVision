@@ -167,7 +167,7 @@ with tab_inspect:
 
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("**Detection & SAM 2.1 Mask**")
+            st.markdown("**Detection & SAM 3 Mask**")
             if result.get("overlay_b64"):
                 st.image(decode_b64_image(result["overlay_b64"]), use_container_width=True)
         with c2:
@@ -244,7 +244,9 @@ with tab_ledger:
         m3.metric("Total Biomass (kg)", f"{sp_df['total_biomass_kg'].sum():.3f}")
         total_fish = sp_df["fish_count"].sum()
         if total_fish > 0 and "pct_undersized" in sp_df:
-            undersized_pct = float((sp_df["pct_undersized"] * sp_df["fish_count"]).sum() / total_fish)
+            undersized_pct = float(
+                (sp_df["pct_undersized"] * sp_df["fish_count"]).sum() / total_fish
+            )
         else:
             undersized_pct = 0.0
         m4.metric("Undersized Share", f"{undersized_pct:.1f}%")

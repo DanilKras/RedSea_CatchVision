@@ -6,9 +6,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from catchvision.config import Settings
 from loguru import logger
 
+from catchvision.config import Settings
 from catchvision.mlops.tracking import ExperimentTracker
 from catchvision.vision.classifier import FishClassifier
 from catchvision.vision.segmentor import FishSegmentor
@@ -149,7 +149,8 @@ def main():
     if not in_det.empty:
         print(f"Top-1: {in_det['top1_ok'].mean():.1%} | Top-3: {in_det['top3_ok'].mean():.1%}")
         print(
-            f"In-dist cosine min={in_det['raw_cosine_sim'].min():.3f}, median={in_det['raw_cosine_sim'].median():.3f}"
+            f"In-dist cosine min={in_det['raw_cosine_sim'].min():.3f}, "
+            f"median={in_det['raw_cosine_sim'].median():.3f}"
         )
     if not ood_det.empty:
         print(f"OOD cosine max={ood_det['raw_cosine_sim'].max():.3f}")
@@ -172,7 +173,7 @@ def main():
         if len(grp) >= 2:
             paths = [Path(p) for p in grp["crop_path"]]
             support[sp] = [paths[0]]
-            for p, zs_ok in zip(paths[1:], grp["top1_ok"].iloc[1:]):
+            for p, zs_ok in zip(paths[1:], grp["top1_ok"].iloc[1:], strict=False):
                 queries.append((sp, p, zs_ok))
 
     if support and queries:
@@ -182,7 +183,8 @@ def main():
         metrics["one_shot_query_top1"] = float(np.mean(one_shot_hits))
         print(
             f"\n1-Shot ({len(queries)} queries): "
-            f"Zero-Shot {metrics['zero_shot_query_top1']:.1%} -> 1-Shot {metrics['one_shot_query_top1']:.1%}"
+            f"Zero-Shot {metrics['zero_shot_query_top1']:.1%} ->"
+            f"1-Shot {metrics['one_shot_query_top1']:.1%}"
         )
 
     ExperimentTracker().log_run(

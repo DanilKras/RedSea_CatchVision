@@ -9,9 +9,14 @@ from collections import OrderedDict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Annotated
 
 import cv2
 import pandas as pd
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
+from loguru import logger
+
 from catchvision.api.schemas import (
     BenchmarkRequest,
     BenchmarkSummaryResponse,
@@ -33,9 +38,6 @@ from catchvision.vision.classifier import (
     SpeciesSpec,
 )
 from catchvision.vision.segmentor import FishSegmentor
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
-from loguru import logger
 
 SETTINGS = Settings()
 DB_PATH = Path(os.getenv("CATCHVISION_DB_PATH", str(SETTINGS.db_path)))
@@ -149,14 +151,14 @@ def health() -> HealthResponse:
 
 @app.post("/api/v1/inspect", response_model=InspectResponse)
 def inspect_image(
-        file: UploadFile | None = File(None),
-        use_sample: bool = Form(False),
-        site_name: str = Form("Thuwal_KAUST_Dock"),
-        box_threshold: float = Form(SETTINGS.box_threshold),
-        min_conf_auto: float = Form(SETTINGS.min_conf_for_auto),
-        min_cos_auto: float = Form(SETTINGS.min_cosine_sim),
-        include_jewel_demo: bool = Form(False),
-        save_db: bool = Form(False),
+    file: Annotated[UploadFile | None, File()] = None,
+    use_sample: bool = Form(False),
+    site_name: str = Form("Thuwal_KAUST_Dock"),
+    box_threshold: float = Form(SETTINGS.box_threshold),
+    min_conf_auto: float = Form(SETTINGS.min_conf_for_auto),
+    min_cos_auto: float = Form(SETTINGS.min_cosine_sim),
+    include_jewel_demo: bool = Form(False),
+    save_db: bool = Form(False),
 ) -> InspectResponse:
     run_dir = API_WORK_DIR / uuid.uuid4().hex[:10]
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -209,9 +211,9 @@ def inspect_image(
     rows = []
     for it, meas, cls_res in zip(items, measurements, cls_results, strict=True):
         needs_rev = (
-                cls_res.confidence < min_conf_auto
-                or cls_res.margin_top1_top2 < SETTINGS.min_margin_for_auto
-                or cls_res.raw_cosine_sim < min_cos_auto
+            cls_res.confidence < min_conf_auto
+            or cls_res.margin_top1_top2 < SETTINGS.min_margin_for_auto
+            or cls_res.raw_cosine_sim < min_cos_auto
         )
         rows.append(
             FishInspectionRow(

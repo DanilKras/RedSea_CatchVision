@@ -359,7 +359,8 @@ class ArucoCalibrator:
 
             mid_x = int(round((p1[0] + p2[0]) / 2))
             mid_y = int(round((p1[1] + p2[1]) / 2)) - 12
-            label = f"#{m.fish_id} TL:{m.midline_length_mm / 10.0:.1f}cm H:{m.body_depth_mm / 10.0:.1f}cm"
+            label = (f"#{m.fish_id} TL:{m.midline_length_mm / 10.0:.1f}"
+                     f"cm H:{m.body_depth_mm / 10.0:.1f}cm")
             cv2.putText(
                 canvas,
                 label,
@@ -372,7 +373,8 @@ class ArucoCalibrator:
 
         cv2.putText(
             canvas,
-            f"Markers: {calib.detected_marker_ids} | Reproj err: {calib.reprojection_error_mm:.2f} mm",
+            f"Markers: {calib.detected_marker_ids} "
+            f"Reproj err: {calib.reprojection_error_mm:.2f} mm",
             (15, 28),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.65,

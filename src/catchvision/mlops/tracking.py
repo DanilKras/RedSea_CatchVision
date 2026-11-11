@@ -41,7 +41,9 @@ class ExperimentTracker:
         self.experiment_name = experiment_name
         self.manifest_dir = Path(manifest_dir)
         self.manifest_dir.mkdir(parents=True, exist_ok=True)
-        self.tracking_uri = tracking_uri or os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlruns/mlflow.db")
+        self.tracking_uri = tracking_uri or os.getenv(
+            "MLFLOW_TRACKING_URI", "sqlite:///mlruns/mlflow.db"
+        )
 
     def log_run(
         self,

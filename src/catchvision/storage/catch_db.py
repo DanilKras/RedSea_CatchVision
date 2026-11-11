@@ -10,10 +10,9 @@ import duckdb
 import pandas as pd
 from loguru import logger
 
-from catchvision.config import SegmentedFish
+from catchvision.config import SegmentedFish, Settings
 from catchvision.geometry.calibration import CalibrationResult, FishMeasurement
 from catchvision.vision.classifier import ClassificationResult
-from catchvision.config import SegmentedFish, Settings
 
 
 class CatchDatabase:
@@ -30,10 +29,15 @@ class CatchDatabase:
         cfg = settings or Settings()
         self.db_path = Path(db_path) if db_path is not None else cfg.db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.min_conf_for_auto = (cfg.min_conf_for_auto if min_conf_for_auto is None else min_conf_for_auto)
+        self.min_conf_for_auto = (
+            cfg.min_conf_for_auto if min_conf_for_auto is None else min_conf_for_auto
+        )
         self.min_margin_for_auto = (
-        cfg.min_margin_for_auto if min_margin_for_auto is None else min_margin_for_auto)
-        self.min_cosine_for_auto = (cfg.min_cosine_sim if min_cosine_for_auto is None else min_cosine_for_auto)
+            cfg.min_margin_for_auto if min_margin_for_auto is None else min_margin_for_auto
+        )
+        self.min_cosine_for_auto = (
+            cfg.min_cosine_sim if min_cosine_for_auto is None else min_cosine_for_auto
+        )
         self.conn = duckdb.connect(str(self.db_path))
         self._init_schema()
 
@@ -234,12 +238,14 @@ class CatchDatabase:
         if rows:
             self.conn.executemany(
                 """
-                INSERT INTO catch_records (record_id, frame_id, fish_id, det_confidence, top_species,
-                                           common_name, local_name_ar, family, cls_confidence,
-                                           margin_top1_top2, needs_review, straight_length_mm,
-                                           midline_length_mm, body_depth_mm, area_cm2, curvature_ratio,
-                                           estimated_weight_g, below_min_legal_size, crop_path,
-                                           masked_crop_path, raw_cosine_sim)
+                INSERT INTO catch_records (
+                    record_id, frame_id, fish_id, det_confidence, top_species,
+                    common_name, local_name_ar, family, cls_confidence,
+                    margin_top1_top2, needs_review, straight_length_mm,
+                    midline_length_mm, body_depth_mm, area_cm2, curvature_ratio,
+                    estimated_weight_g, below_min_legal_size, crop_path,
+                    masked_crop_path, raw_cosine_sim
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 rows,
@@ -291,7 +297,6 @@ class CatchDatabase:
             logger.info(f"Saved {len(payload)} benchmark rows (run_id={run_id}) -> {self.db_path}")
 
     def get_species_summary(self) -> pd.DataFrame:
-        """Aggregate catch counts, mean TL (cm), total biomass (kg), and undersized share by species."""
         return self.conn.execute(
             """
             SELECT top_species,

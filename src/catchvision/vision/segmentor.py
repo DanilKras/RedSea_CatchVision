@@ -32,9 +32,7 @@ class FishSegmentor:
                 ) from exc
 
             self.sam3_processor = Sam3Processor.from_pretrained(self.settings.sam3_model_id)
-            self.sam3_model = Sam3Model.from_pretrained(self.settings.sam3_model_id).to(
-                self.device
-            )
+            self.sam3_model = Sam3Model.from_pretrained(self.settings.sam3_model_id).to(self.device)
             self.sam3_model.eval()
         else:
             if self.device.startswith("cuda"):
@@ -56,7 +54,6 @@ class FishSegmentor:
         iou_thresh: float = 0.5,
         containment_thresh: float = 0.65,
     ) -> list[int]:
-        """Suppress overlapping duplicates (IoU) and smaller sub-boxes (e.g., fins) inside larger detections."""
         if len(boxes) == 0:
             return []
 

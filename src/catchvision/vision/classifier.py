@@ -13,8 +13,8 @@ from loguru import logger
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from catchvision.config import Settings
 from catchvision.biology.metrics import estimate_weight_g
+from catchvision.config import Settings
 
 DEFAULT_BIOCLIP_MODEL = "hf-hub:imageomics/bioclip"
 
@@ -228,8 +228,6 @@ DEFAULT_RED_SEA_SPECIES: tuple[SpeciesSpec, ...] = (
 
 
 class FishClassifier:
-    """BioCLIP-based reef fish classifier supporting zero-shot text prompts and visual prototypes."""
-
     def __init__(
         self,
         species_catalog: Sequence[SpeciesSpec] | None = None,
@@ -249,7 +247,8 @@ class FishClassifier:
         tw = self.settings.bioclip_text_weight if text_weight is None else text_weight
         self.text_weight = float(np.clip(tw, 0.0, 1.0))
         self.min_cosine_sim = (
-        self.settings.min_cosine_sim if min_cosine_sim is None else min_cosine_sim)
+            self.settings.min_cosine_sim if min_cosine_sim is None else min_cosine_sim
+        )
 
         self.species: list[SpeciesSpec] = list(species_catalog or DEFAULT_RED_SEA_SPECIES)
         if not self.species:
@@ -402,7 +401,6 @@ class FishClassifier:
         lengths_cm: Sequence[float | None] | None = None,
         top_k: int = 5,
     ) -> list[ClassificationResult]:
-        """Classify a batch of fish crops and estimate weight/legal-size status if lengths are given."""
         if not images:
             return []
 
