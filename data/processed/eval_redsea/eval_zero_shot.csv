@@ -1,0 +1,37 @@
+gt_species,is_ood,image,detected,pred_species,top1_ok,top3_ok,cls_conf,raw_cosine_sim
+Plectropomus pessuliferus,False,inat_345460600.jpg,True,Cephalopholis miniata,False,False,0.8471,0.2865
+Plectropomus pessuliferus,False,inat_51872306.jpg,True,Variola louti,False,True,0.9969,0.2993
+Plectropomus pessuliferus,False,inat_86143912.jpg,True,Cephalopholis miniata,False,False,0.6586,0.1836
+Variola louti,False,inat_107870999.jpg,True,Cheilinus undulatus,False,True,0.5591,0.1877
+Variola louti,False,inat_1969346.jpg,True,Acanthurus sohal,False,False,0.5616,0.1396
+Variola louti,False,inat_335723255.jpg,True,Cephalopholis miniata,False,False,0.5452,0.2351
+Cephalopholis miniata,False,inat_10120330.jpg,True,Cephalopholis miniata,True,True,0.9454,0.2504
+Cephalopholis miniata,False,inat_293242435.jpg,True,Cephalopholis miniata,True,True,0.8539,0.2801
+Cephalopholis miniata,False,inat_80652716.jpg,True,Cephalopholis miniata,True,True,0.9968,0.267
+Lutjanus bohar,False,inat_154054098.jpg,True,Pterois miles,False,False,0.8863,0.1816
+Lutjanus bohar,False,inat_27670078.jpg,True,Lutjanus bohar,True,True,0.9719,0.2722
+Lutjanus bohar,False,inat_335179877.jpg,True,Lutjanus bohar,True,True,0.9999,0.2999
+Lethrinus nebulosus,False,inat_173713932.jpg,True,Cheilinus undulatus,False,False,0.9575,0.1834
+Lethrinus nebulosus,False,inat_259629613.jpg,True,Lethrinus nebulosus,True,True,0.9755,0.2956
+Lethrinus nebulosus,False,inat_51443950.jpg,True,Pterois miles,False,False,0.9835,0.1987
+Scarus ferrugineus,False,inat_110580814.jpg,True,Scarus ferrugineus,True,True,0.996,0.2722
+Scarus ferrugineus,False,inat_189117304.jpg,True,Scarus ferrugineus,True,True,0.9144,0.2595
+Scarus ferrugineus,False,inat_324659286.jpg,True,Variola louti,False,False,0.7943,0.161
+Siganus rivulatus,False,inat_106265586.jpg,True,Acanthurus sohal,False,False,0.5227,0.1839
+Siganus rivulatus,False,inat_253622310.jpg,True,Variola louti,False,True,0.7542,0.2513
+Siganus rivulatus,False,inat_395184190.jpg,True,Pterois miles,False,True,0.3674,0.1716
+Acanthurus sohal,False,inat_223616063.jpg,True,Acanthurus sohal,True,True,0.9983,0.3103
+Acanthurus sohal,False,inat_41291986.jpg,True,Naso unicornis,False,True,0.5811,0.2569
+Acanthurus sohal,False,inat_54713463.jpg,True,Acanthurus sohal,True,True,0.4781,0.2652
+Cheilinus undulatus,False,inat_110830715.jpg,True,Cheilinus undulatus,True,True,0.8322,0.2824
+Cheilinus undulatus,False,inat_166678088.jpg,True,Lutjanus bohar,False,False,0.3857,0.2282
+Cheilinus undulatus,False,inat_166678091.jpg,True,Cheilinus undulatus,True,True,0.8295,0.2647
+Pterois miles,False,inat_11128495.jpg,True,Pterois miles,True,True,1.0,0.3501
+Pterois miles,False,inat_259424430.jpg,True,Pterois miles,True,True,0.9998,0.2826
+Pterois miles,False,inat_52580444.jpg,True,Pterois miles,True,True,0.9999,0.2952
+Diodon hystrix,True,inat_116380268.jpg,True,Pterois miles,False,False,0.9216,0.1854
+Diodon hystrix,True,inat_34753252.jpg,False,,False,False,,
+Diodon hystrix,True,inat_42047173.jpg,False,,False,False,,
+Arothron stellatus,True,inat_263612027.jpg,True,Cephalopholis miniata,False,False,0.5016,0.1629
+Arothron stellatus,True,inat_26955042.jpg,True,Epinephelus polyphekadion,False,False,0.6568,0.198
+Arothron stellatus,True,inat_349986094.jpg,True,Epinephelus polyphekadion,False,False,0.9985,0.221

@@ -1,0 +1,25 @@
+{
+  "run_id": "e0b1bf44bd",
+  "run_name": "inat_open_set_eval",
+  "experiment": "RedSea-CatchVision",
+  "timestamp_utc": "2026-11-11T14:10:04.462254+00:00",
+  "git_commit": "unknown",
+  "params": {
+    "segmentor_backend": "sam3",
+    "box_threshold": 0.28,
+    "min_cosine_sim": 0.22,
+    "bioclip_model": "hf-hub:imageomics/bioclip"
+  },
+  "metrics": {
+    "detection_rate": 1.0,
+    "top1_all": 0.5,
+    "top3_all": 0.66667,
+    "ood_max_cos": 0.221,
+    "zero_shot_query_top1": 0.5,
+    "one_shot_query_top1": 0.45
+  },
+  "artifacts": [
+    "/home/krasn/projects/RedSea-CatchVision/data/processed/eval_redsea/eval_zero_shot.csv"
+  ],
+  "tags": {}
+}

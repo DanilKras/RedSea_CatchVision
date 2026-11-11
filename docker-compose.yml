@@ -1,0 +1,65 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.19.0
+    container_name: catchvision-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlruns/mlflow.db
+      --artifacts-destination /mlruns/artifacts
+      --serve-artifacts
+
+  api:
+    build:
+      context: .
+      dockerfile: src/catchvision/api/Dockerfile
+    image: redsea-catchvision-api:latest
+    container_name: catchvision-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./data:/app/data
+      - hf_cache:/root/.cache/huggingface
+      - torch_cache:/root/.cache/torch
+    depends_on:
+      - mlflow
+
+  ui:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: catchvision-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  cli:
+    build:
+      context: .
+      dockerfile: src/catchvision/api/Dockerfile
+    image: redsea-catchvision-api:latest
+    profiles: ["cli"]
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./data:/app/data
+      - hf_cache:/root/.cache/huggingface
+      - torch_cache:/root/.cache/torch
+    depends_on:
+      - mlflow
+    entrypoint: ["uv", "run", "--no-sync", "python", "-m", "catchvision.cli"]
+
+volumes:
+  hf_cache:
+  torch_cache:

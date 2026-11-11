@@ -1,0 +1,78 @@
+# --- Python & uv ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.uv_cache/
+*.egg-info/
+dist/
+build/
+.cadence/
+!data/*/.gitkeep
+
+# --- Tests, Linters & IDE ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+.DS_Store
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Secrets & Logs ---
+.env
+.env.*
+!.env.example
+*.log
+
+# --- Databases & MLOps Tracking ---
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+mlruns/
+mlartifacts/
+
+# --- Model Weights & Caches ---
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+weights/
+checkpoints/
+.cache/
+
+# --- Data & Artifacts (ignore heavy raw/crops, keep lightweight reproducible outputs) ---
+data/*
+
+# Keep MLOps JSON manifests
+!data/artifacts/
+data/artifacts/*
+!data/artifacts/runs/
+data/artifacts/runs/*
+!data/artifacts/runs/*.json
+
+# Keep benchmark CSVs and one demo sample image
+!data/processed/
+data/processed/*
+
+!data/processed/eval_redsea/
+data/processed/eval_redsea/*
+!data/processed/eval_redsea/eval_zero_shot.csv
+
+!data/processed/stress_test/
+data/processed/stress_test/*
+!data/processed/stress_test/stress_benchmark_results.csv
+
+!data/processed/stress_cli/
+data/processed/stress_cli/*
+!data/processed/stress_cli/stress_benchmark_results.csv
+
+!data/processed/test_run/
+data/processed/test_run/*
+!data/processed/test_run/synthetic_tilted.jpg

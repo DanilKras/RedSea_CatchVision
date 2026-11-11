@@ -1,0 +1,22 @@
+{
+  "run_id": "d2e84e3dcf",
+  "run_name": "api_stress_benchmark",
+  "experiment": "RedSea-CatchVision",
+  "timestamp_utc": "2026-11-11T13:32:11.757241+00:00",
+  "git_commit": "unknown",
+  "params": {
+    "image": "synthetic_tilted.jpg",
+    "severities": [
+      0.4,
+      0.8
+    ]
+  },
+  "metrics": {
+    "calibration_rate": 1.0,
+    "mean_length_pct_error": 0.40923
+  },
+  "artifacts": [
+    "/app/data/processed/stress_api/stress_benchmark_results.csv"
+  ],
+  "tags": {}
+}
