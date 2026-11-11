@@ -118,8 +118,8 @@ RedSea-CatchVision/
 ### Option A: Docker Compose (Recommended)
 
 ```bash
-git clone [https://github.com/](https://github.com/)DanilKras/RedSea-CatchVision.git
-cd RedSea-CatchVision
+git clone [https://github.com/](https://github.com/)DanilKras/RedSea_CatchVision.git
+cd RedSea_CatchVision
 
 docker compose up --build
 ```
