@@ -71,7 +71,7 @@ Tested synthetic degradations (`sun_glare`, `water_droplets`, `low_light`, `moti
 ## Quickstart
 
 ```bash
-git clone [https://github.com/DanilKras/RedSea_CatchVision.git](https://github.com/DanilKras/RedSea_CatchVision.git)
+git clone https://github.com/DanilKras/RedSea_CatchVision.git
 cd RedSea_CatchVision
 
 # Start Streamlit UI (:8501), FastAPI (:8000), and MLflow (:5000)
