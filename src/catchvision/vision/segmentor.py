@@ -86,11 +86,11 @@ class FishSegmentor:
         return keep
 
     @torch.inference_mode()
-    def detect_fish_boxes(self, image_pil: Image.Image) -> tuple[np.ndarray, np.ndarray]:
-        """Run GroundingDINO and filter duplicate or nested bounding boxes."""
+    def detect_fish_boxes(self, image_pil: Image.Image, box_threshold: float | None = None):
         if self.backend != "gdino_sam2":
-            raise RuntimeError("detect_fish_boxes is only available for backend='gdino_sam2'.")
+            raise RuntimeError("detect_fish_boxes is only available for backend='gdino_sam2'")
 
+        thresh = self.settings.box_threshold if box_threshold is None else box_threshold
         inputs = self.processor(
             images=image_pil,
             text=self.settings.text_prompt,
@@ -101,7 +101,7 @@ class FishSegmentor:
         results = self.processor.post_process_grounded_object_detection(
             outputs,
             inputs.input_ids,
-            threshold=self.settings.box_threshold,
+            threshold=thresh,
             text_threshold=self.settings.text_threshold,
             target_sizes=[(image_pil.height, image_pil.width)],
         )[0]
@@ -117,8 +117,9 @@ class FishSegmentor:
     def _predict_sam3(
         self,
         image_pil: Image.Image,
+        box_threshold: float | None = None,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Run single-pass Promptable Concept Segmentation with SAM 3."""
+        thresh = self.settings.box_threshold if box_threshold is None else box_threshold
         prompt = self.settings.text_prompt.rstrip(".").strip() or "fish"
         inputs = self.sam3_processor(
             images=image_pil,
@@ -129,7 +130,7 @@ class FishSegmentor:
         outputs = self.sam3_model(**inputs)
         results = self.sam3_processor.post_process_instance_segmentation(
             outputs,
-            threshold=self.settings.box_threshold,
+            threshold=thresh,
             mask_threshold=0.5,
             target_sizes=[(image_pil.height, image_pil.width)],
         )[0]
@@ -154,8 +155,9 @@ class FishSegmentor:
         image_path: Path,
         output_dir: Path,
         save_overlay: bool = True,
+        box_threshold: float | None = None,
     ) -> tuple[list[SegmentedFish], list[np.ndarray]]:
-        """Detect fish boxes, extract instance masks, and save raw/neutral-background crops."""
+        thresh = self.settings.box_threshold if box_threshold is None else box_threshold
         image_bgr = cv2.imread(str(image_path))
         if image_bgr is None:
             raise FileNotFoundError(f"Cannot read image: {image_path}")
@@ -164,7 +166,7 @@ class FishSegmentor:
         image_pil = Image.fromarray(image_rgb)
 
         if self.backend == "sam3":
-            boxes, scores, masks_np = self._predict_sam3(image_pil)
+            boxes, scores, masks_np = self._predict_sam3(image_pil, box_threshold=thresh)
             logger.info(
                 f"SAM 3 detected {len(boxes)} instances (scores={np.round(scores, 3).tolist()})"
             )
@@ -173,12 +175,11 @@ class FishSegmentor:
 
             if len(boxes) == 0 or len(masks_np) == 0:
                 logger.warning(
-                    f"No fish detected in {image_path.name} "
-                    f"(backend=sam3, box_threshold={self.settings.box_threshold})"
+                    f"No fish detected in {image_path.name} (backend=sam3, box_threshold={thresh})"
                 )
                 return [], []
         else:
-            boxes, scores = self.detect_fish_boxes(image_pil)
+            boxes, scores = self.detect_fish_boxes(image_pil, box_threshold=thresh)
             logger.info(
                 f"GroundingDINO detected {len(boxes)} boxes (scores={np.round(scores, 3).tolist()})"
             )
@@ -186,10 +187,7 @@ class FishSegmentor:
                 torch.cuda.empty_cache()
 
             if len(boxes) == 0:
-                logger.warning(
-                    f"No fish detected in {image_path.name} "
-                    f"(box_threshold={self.settings.box_threshold})"
-                )
+                logger.warning(f"No fish detected in {image_path.name} (box_threshold={thresh})")
                 return [], []
 
             sam_results = self.sam.predict(
@@ -221,6 +219,17 @@ class FishSegmentor:
             if area_px == 0 or x2 <= x1 or y2 <= y1:
                 continue
 
+            touches_border = bool(
+                x1 == 0
+                or y1 == 0
+                or x2 == w
+                or y2 == h
+                or mask[0, :].any()
+                or mask[-1, :].any()
+                or mask[:, 0].any()
+                or mask[:, -1].any()
+            )
+
             raw_crop = image_bgr[y1:y2, x1:x2]
             raw_crop_path = output_dir / f"{image_path.stem}_fish_{idx}_raw.jpg"
             cv2.imwrite(str(raw_crop_path), raw_crop)
@@ -251,6 +260,7 @@ class FishSegmentor:
                     confidence=float(score),
                     bbox_xyxy=(float(x1), float(y1), float(x2), float(y2)),
                     mask_area_px=area_px,
+                    touches_border=touches_border,
                     crop_path=raw_crop_path,
                     masked_crop_path=masked_crop_path,
                 )

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     camera_height_mm: float | None = None
 
     mlflow_tracking_uri: str = "sqlite:///mlruns/mlflow.db"
-    segmentor_backend: Literal["gdino_sam2", "sam3"] = "gdino_sam2"
+    segmentor_backend: Literal["gdino_sam2", "sam3"] = "sam3"
     sam3_model_id: str = "facebook/sam3"
 
     @computed_field

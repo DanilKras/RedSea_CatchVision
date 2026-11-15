@@ -118,7 +118,6 @@ class ArucoCalibrator:
             )
 
         if len(matched) >= 4:
-            # Four marker centers give an exact homography independent of marker size
             src_pts = np.array([pts.mean(axis=0) for pts in matched.values()], dtype=np.float64)
             dst_pts = np.array(
                 [self.marker_centers_mm[mid] for mid in matched],
@@ -359,8 +358,10 @@ class ArucoCalibrator:
 
             mid_x = int(round((p1[0] + p2[0]) / 2))
             mid_y = int(round((p1[1] + p2[1]) / 2)) - 12
-            label = (f"#{m.fish_id} TL:{m.midline_length_mm / 10.0:.1f}"
-                     f"cm H:{m.body_depth_mm / 10.0:.1f}cm")
+            label = (
+                f"#{m.fish_id} TL:{m.midline_length_mm / 10.0:.1f}"
+                f"cm H:{m.body_depth_mm / 10.0:.1f}cm"
+            )
             cv2.putText(
                 canvas,
                 label,

@@ -56,6 +56,7 @@ class PendingInspection:
     site_name: str
     min_conf_auto: float
     min_cos_auto: float
+    committed_frame_id: str | None = None
 
 
 def _encode_bgr_b64(img_bgr) -> str:
@@ -108,7 +109,6 @@ async def lifespan(app: FastAPI):
     app.state.gpu_lock = threading.Lock()
     app.state.db_lock = threading.Lock()
     app.state.pending = OrderedDict()
-    app.state.include_jewel_demo = False
 
     if not SETTINGS.skip_model_load and os.getenv("CATCHVISION_SKIP_MODEL_LOAD", "0") != "1":
         logger.info("Initializing CV models and DuckDB...")
@@ -117,6 +117,7 @@ async def lifespan(app: FastAPI):
             board_size_mm=(SETTINGS.board_width_mm, SETTINGS.board_height_mm),
             marker_size_mm=SETTINGS.marker_size_mm,
             px_per_mm=SETTINGS.pixels_per_mm,
+            aruco_dict_id=getattr(cv2.aruco, SETTINGS.aruco_dict_name),
             min_markers=SETTINGS.aruco_min_markers,
         )
         app.state.classifier = FishClassifier(settings=SETTINGS)
@@ -146,19 +147,20 @@ def health() -> HealthResponse:
         status="ok",
         device=getattr(seg, "device", "unknown"),
         models_loaded=seg is not None,
+        segmentor_backend=getattr(seg, "backend", SETTINGS.segmentor_backend),
     )
 
 
 @app.post("/api/v1/inspect", response_model=InspectResponse)
 def inspect_image(
-    file: Annotated[UploadFile | None, File()] = None,
-    use_sample: bool = Form(False),
-    site_name: str = Form("Thuwal_KAUST_Dock"),
-    box_threshold: float = Form(SETTINGS.box_threshold),
-    min_conf_auto: float = Form(SETTINGS.min_conf_for_auto),
-    min_cos_auto: float = Form(SETTINGS.min_cosine_sim),
-    include_jewel_demo: bool = Form(False),
-    save_db: bool = Form(False),
+        file: Annotated[UploadFile | None, File()] = None,
+        use_sample: bool = Form(False),
+        site_name: str = Form("Thuwal_KAUST_Dock"),
+        box_threshold: float = Form(SETTINGS.box_threshold),
+        min_conf_auto: float = Form(SETTINGS.min_conf_for_auto),
+        min_cos_auto: float = Form(SETTINGS.min_cosine_sim),
+        include_jewel_demo: bool = Form(False),
+        save_db: bool = Form(False),
 ) -> InspectResponse:
     run_dir = API_WORK_DIR / uuid.uuid4().hex[:10]
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -173,12 +175,11 @@ def inspect_image(
     classifier: FishClassifier = app.state.classifier
 
     with app.state.gpu_lock:
-        segmentor.settings.box_threshold = box_threshold
+        prev_min_cos = classifier.min_cosine_sim
         classifier.min_cosine_sim = min_cos_auto
-
-        if include_jewel_demo != getattr(app.state, "include_jewel_demo", False):
-            catalog = list(DEFAULT_RED_SEA_SPECIES)
+        try:
             if include_jewel_demo:
+                catalog = list(DEFAULT_RED_SEA_SPECIES)
                 catalog.append(
                     SpeciesSpec(
                         scientific_name="Hemichromis guttatus",
@@ -186,16 +187,24 @@ def inspect_image(
                         family="Cichlidae",
                     )
                 )
-            classifier.set_species_catalog(catalog)
-            app.state.include_jewel_demo = include_jewel_demo
+                classifier.set_species_catalog(catalog)
 
-        items, masks = segmentor.segment_image(target_path, run_dir, save_overlay=True)
-        calib, measurements = _measure_fish(calibrator, img_bgr, items, masks)
-        cls_results = classifier.classify_batch(
-            [it.masked_crop_path for it in items],
-            fish_ids=[it.fish_id for it in items],
-            lengths_cm=[(m.midline_length_mm / 10.0) if m else None for m in measurements],
-        )
+            items, masks = segmentor.segment_image(
+                target_path,
+                run_dir,
+                save_overlay=True,
+                box_threshold=box_threshold,
+            )
+            calib, measurements = _measure_fish(calibrator, img_bgr, items, masks)
+            cls_results = classifier.classify_batch(
+                [it.masked_crop_path for it in items],
+                fish_ids=[it.fish_id for it in items],
+                lengths_cm=[(m.midline_length_mm / 10.0) if m else None for m in measurements],
+            )
+        finally:
+            classifier.min_cosine_sim = prev_min_cos
+            if include_jewel_demo:
+                classifier.set_species_catalog(DEFAULT_RED_SEA_SPECIES)
 
     overlay_path = run_dir / f"{target_path.stem}_overlay.jpg"
     overlay_img = cv2.imread(str(overlay_path)) if overlay_path.exists() else img_bgr
@@ -211,9 +220,9 @@ def inspect_image(
     rows = []
     for it, meas, cls_res in zip(items, measurements, cls_results, strict=True):
         needs_rev = (
-            cls_res.confidence < min_conf_auto
-            or cls_res.margin_top1_top2 < SETTINGS.min_margin_for_auto
-            or cls_res.raw_cosine_sim < min_cos_auto
+                cls_res.confidence < min_conf_auto
+                or cls_res.margin_top1_top2 < SETTINGS.min_margin_for_auto
+                or cls_res.raw_cosine_sim < min_cos_auto
         )
         rows.append(
             FishInspectionRow(
@@ -225,6 +234,7 @@ def inspect_image(
                 raw_cos=cls_res.raw_cosine_sim,
                 margin=cls_res.margin_top1_top2,
                 needs_review=needs_rev,
+                touches_border=it.touches_border,
                 tl_cm=round(meas.midline_length_mm / 10.0, 2) if meas else None,
                 depth_cm=round(meas.body_depth_mm / 10.0, 2) if meas else None,
                 weight_g=cls_res.estimated_weight_g,
@@ -249,16 +259,22 @@ def inspect_image(
     if save_db and items:
         with app.state.db_lock:
             db: CatchDatabase = app.state.db
+            prev_db_conf, prev_db_cos = db.min_conf_for_auto, db.min_cosine_for_auto
             db.min_conf_for_auto = min_conf_auto
             db.min_cosine_for_auto = min_cos_auto
-            db.save_frame_results(
-                image_path=target_path,
-                calib=calib,
-                segmented=items,
-                measurements=measurements,
-                classifications=cls_results,
-                site_name=site_name,
-            )
+            try:
+                frame_id = db.save_frame_results(
+                    image_path=target_path,
+                    calib=calib,
+                    segmented=items,
+                    measurements=measurements,
+                    classifications=cls_results,
+                    site_name=site_name,
+                )
+                app.state.pending[insp_id].committed_frame_id = frame_id
+            finally:
+                db.min_conf_for_auto = prev_db_conf
+                db.min_cosine_for_auto = prev_db_cos
 
     return InspectResponse(
         inspection_id=insp_id,
@@ -274,22 +290,32 @@ def inspect_image(
 
 @app.post("/api/v1/inspect/{inspection_id}/commit", response_model=CommitResponse)
 def commit_inspection(inspection_id: str) -> CommitResponse:
-    pending = app.state.pending.get(inspection_id)
-    if pending is None:
-        raise HTTPException(status_code=404, detail="Inspection ID expired or not found.")
-
     with app.state.db_lock:
+        pending = app.state.pending.get(inspection_id)
+        if pending is None:
+            raise HTTPException(status_code=404, detail="Inspection ID expired or not found.")
+        if pending.committed_frame_id is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Inspection already committed as frame `{pending.committed_frame_id}`.",
+            )
         db: CatchDatabase = app.state.db
+        prev_db_conf, prev_db_cos = db.min_conf_for_auto, db.min_cosine_for_auto
         db.min_conf_for_auto = pending.min_conf_auto
         db.min_cosine_for_auto = pending.min_cos_auto
-        frame_id = db.save_frame_results(
-            image_path=pending.image_path,
-            calib=pending.calib,
-            segmented=pending.segmented,
-            measurements=pending.measurements,
-            classifications=pending.classifications,
-            site_name=pending.site_name,
-        )
+        try:
+            frame_id = db.save_frame_results(
+                image_path=pending.image_path,
+                calib=pending.calib,
+                segmented=pending.segmented,
+                measurements=pending.measurements,
+                classifications=pending.classifications,
+                site_name=pending.site_name,
+            )
+            pending.committed_frame_id = frame_id
+        finally:
+            db.min_conf_for_auto = prev_db_conf
+            db.min_cosine_for_auto = prev_db_cos
     return CommitResponse(frame_id=frame_id, fish_count=len(pending.segmented))
 
 

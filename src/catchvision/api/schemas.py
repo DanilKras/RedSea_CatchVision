@@ -9,6 +9,7 @@ class HealthResponse(BaseModel):
     status: str
     device: str
     models_loaded: bool
+    segmentor_backend: str = "gdino_sam2"
 
 
 class FishInspectionRow(BaseModel):
@@ -24,6 +25,7 @@ class FishInspectionRow(BaseModel):
     depth_cm: float | None = None
     weight_g: float | None = None
     undersized: bool | None = None
+    touches_border: bool = False
 
 
 class InspectResponse(BaseModel):

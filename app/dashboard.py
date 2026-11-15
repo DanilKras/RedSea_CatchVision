@@ -21,6 +21,10 @@ DEFAULT_SCENARIOS = [
     "marker_occlusion_1",
     "marker_occlusion_2",
 ]
+BACKEND_LABELS = {
+    "gdino_sam2": "GroundingDINO + SAM 2.1",
+    "sam3": "SAM 3",
+}
 
 st.set_page_config(
     page_title="RedSea-CatchVision",
@@ -53,6 +57,31 @@ def check_api_health(base_url: str) -> dict[str, object] | None:
         return None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_ledger(base_url: str, limit: int = 100) -> dict[str, list[dict[str, object]]]:
+    resp = httpx.get(
+        f"{base_url}/api/v1/ledger",
+        params={"limit": limit},
+        timeout=10.0,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_benchmark_summary(base_url: str) -> dict[str, object]:
+    resp = httpx.get(f"{base_url}/api/v1/benchmark", timeout=10.0)
+    resp.raise_for_status()
+    return resp.json()
+
+
+@st.cache_data(ttl=300, max_entries=24, show_spinner=False)
+def fetch_artifact_bytes(base_url: str, rel_path: str) -> bytes:
+    resp = httpx.get(f"{base_url}/api/v1/artifacts/{rel_path}", timeout=5.0)
+    resp.raise_for_status()
+    return resp.content
+
+
 def style_plotly(fig):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
@@ -63,16 +92,18 @@ def style_plotly(fig):
 
 
 st.title("RedSea-CatchVision")
+health = check_api_health(API_BASE_URL)
+backend_code = health.get("segmentor_backend", "gdino_sam2") if health else "gdino_sam2"
+backend_label = BACKEND_LABELS.get(str(backend_code), str(backend_code))
 st.caption(
-    "Automated reef fishery monitoring: GroundingDINO + SAM 2.1 segmentation, "
+    f"Automated reef fishery monitoring: {backend_label} segmentation, "
     "ArUco metric sizing, and open-set BioCLIP identification."
 )
 
 with st.sidebar:
     st.subheader("System Status")
-    health = check_api_health(API_BASE_URL)
     if health:
-        st.success(f"Inference API online ({health.get('device', 'cpu')})")
+        st.success(f"API online ({health.get('device', 'cpu')} | {backend_label})")
     else:
         st.error(f"Inference API offline ({API_BASE_URL})")
 
@@ -167,7 +198,7 @@ with tab_inspect:
 
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("**Detection & SAM 3 Mask**")
+            st.markdown(f"**Detection & {backend_label} Mask**")
             if result.get("overlay_b64"):
                 st.image(decode_b64_image(result["overlay_b64"]), use_container_width=True)
         with c2:
@@ -178,6 +209,11 @@ with tab_inspect:
                 st.info("No ArUco calibration mat detected — running uncalibrated species ID.")
 
         if rows:
+            if any(r.get("touches_border") for r in rows):
+                st.warning(
+                    "One or more specimens touch the frame border — "
+                    "length and weight estimates may be underestimated."
+                )
             st.markdown("**Specimen Measurements & Open-Set Species ID**")
             st.dataframe(
                 pd.DataFrame(rows),
@@ -194,6 +230,7 @@ with tab_inspect:
                     "raw_cos": st.column_config.NumberColumn("Raw Cosine", format="%.3f"),
                     "margin": st.column_config.NumberColumn("Margin", format="%.2f"),
                     "needs_review": "Review",
+                    "touches_border": "Border Clip",
                     "tl_cm": st.column_config.NumberColumn("TL (cm)", format="%.2f"),
                     "depth_cm": st.column_config.NumberColumn("Depth (cm)", format="%.2f"),
                     "weight_g": st.column_config.NumberColumn("Weight (g)", format="%.1f"),
@@ -201,33 +238,39 @@ with tab_inspect:
                 },
             )
 
-            if st.button("Save Frame to Catch Ledger", type="primary"):
-                insp_id = result["inspection_id"]
+            insp_id = result["inspection_id"]
+            committed = st.session_state.setdefault("committed_inspections", {})
+            saved_payload = committed.get(insp_id)
+            if st.button(
+                    "Saved to Catch Ledger" if saved_payload else "Save Frame to Catch Ledger",
+                    type="primary",
+                    disabled=saved_payload is not None,
+            ):
                 try:
                     commit_resp = httpx.post(
                         f"{API_BASE_URL}/api/v1/inspect/{insp_id}/commit",
                         timeout=15.0,
                     )
                     commit_resp.raise_for_status()
-                    payload = commit_resp.json()
-                    st.success(
-                        f"Saved frame `{payload['frame_id']}` "
-                        f"({payload['fish_count']} specimens) to DuckDB."
-                    )
+                    committed[insp_id] = commit_resp.json()
+                    fetch_ledger.clear()
+                    st.rerun()
                 except Exception as exc:
                     st.error(f"Failed to commit frame: {exc}")
+            if saved_payload is not None:
+                st.success(
+                    f"Saved frame `{saved_payload['frame_id']}` "
+                    f"({saved_payload['fish_count']} specimens) to DuckDB."
+                )
         else:
             st.warning("No fish detected above the active confidence threshold.")
 
 with tab_ledger:
+    if st.button("Refresh Ledger"):
+        fetch_ledger.clear()
+
     try:
-        ledger_resp = httpx.get(
-            f"{API_BASE_URL}/api/v1/ledger",
-            params={"limit": 100},
-            timeout=10.0,
-        )
-        ledger_resp.raise_for_status()
-        ledger = ledger_resp.json()
+        ledger = fetch_ledger(API_BASE_URL, limit=100)
         sp_df = pd.DataFrame(ledger["species_summary"])
         recent_df = pd.DataFrame(ledger["recent_catches"])
     except Exception as exc:
@@ -326,14 +369,14 @@ with tab_bench:
                         timeout=300.0,
                     )
                     b_resp.raise_for_status()
+                    fetch_benchmark_summary.clear()
+                    fetch_artifact_bytes.clear()
                     st.success("Stress benchmark completed and logged to DuckDB + MLflow.")
                 except Exception as exc:
                     st.error(f"Benchmark failed: {exc}")
 
     try:
-        sum_resp = httpx.get(f"{API_BASE_URL}/api/v1/benchmark", timeout=10.0)
-        sum_resp.raise_for_status()
-        bench_payload = sum_resp.json()
+        bench_payload = fetch_benchmark_summary(API_BASE_URL)
         bench_summary = pd.DataFrame(bench_payload["summary"])
         sample_paths = bench_payload["sample_images"]
     except Exception as exc:
@@ -376,13 +419,9 @@ with tab_bench:
         for idx, rel in enumerate(sample_paths):
             with cols[idx % 3]:
                 try:
-                    img_resp = httpx.get(
-                        f"{API_BASE_URL}/api/v1/artifacts/{rel}",
-                        timeout=5.0,
-                    )
-                    img_resp.raise_for_status()
+                    img_bytes = fetch_artifact_bytes(API_BASE_URL, rel)
                     st.image(
-                        img_resp.content,
+                        img_bytes,
                         caption=rel.split("/")[-1],
                         use_container_width=True,
                     )
