@@ -24,7 +24,13 @@ def test_api_inspect_commit_and_ledger(tmp_path: Path, monkeypatch) -> None:
         device = "cpu"
         settings = SimpleNamespace(box_threshold=0.28)
 
-        def segment_image(self, image_path, output_dir, save_overlay=True):
+        def segment_image(
+            self,
+            image_path,
+            output_dir,
+            save_overlay=True,
+            box_threshold: float | None = None,
+        ):
             output_dir.mkdir(parents=True, exist_ok=True)
             if save_overlay:
                 cv2.imwrite(str(output_dir / f"{image_path.stem}_overlay.jpg"), img)
