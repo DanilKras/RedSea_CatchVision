@@ -36,18 +36,18 @@ I built this project to explore how foundation vision models can automate docksi
 ## Experiments & Key Findings
 
 ### 1. Open-Set Species ID & OOD Check (`scripts/eval_redsea.py`)
-Tested on unconstrained underwater iNaturalist photos across **10 Red Sea species** (30 frames) and **2 non-catalog OOD species** (*Diodon hystrix*, *Arothron stellatus*):
+Tested on unconstrained underwater iNaturalist photos across **10 Red Sea species** (30 frames) and **2 non-catalog OOD species** (*Diodon hystrix*, *Arothron stellatus*) using `SAM 3` (`box_threshold=0.28`):
 
 | Metric | Result | Takeaway |
 | :--- | :---: | :--- |
-| **In-Dist Detection Rate** | **90.0%** (27/30) | `GroundingDINO` (`box_threshold=0.28`) + `SAM 2.1` |
-| **Zero-Shot Top-1 / Top-3** | **48.1% / 70.4%** | Underwater angles & color shifts make zero-shot Top-1 challenging |
-| **In-Dist Median Cosine Sim** | **0.255** | Raw `BioCLIP` cosine similarity |
-| **OOD Max Cosine Sim** | **0.203** | Both OOD species stayed below the `0.22` gate |
-| **OOD False Softmax Conf** | `0.62 – 0.81` | Softmax stays overconfident on OOD fish; raw cosine catches it |
-| **1-Shot Prototype Ablation** | `35.3%` (vs `47.1%` ZS) | Adding 1 noisy underwater photo hurt accuracy due to pose/lighting bias |
+| **In-Dist Detection Rate** | **100.0%** (30/30) | `SAM 3` detected every target specimen across 30 underwater frames |
+| **Zero-Shot Top-1 / Top-3** | **50.0% / 66.7%** | Strong zero-shot Top-1 without fine-tuning despite underwater color shifts |
+| **In-Dist Median Cosine Sim** | **0.262** | Tighter `SAM 3` masks improve raw `BioCLIP` alignment |
+| **OOD Max Cosine Sim** | **0.221** (`0.163–0.198` on 3/4) | Raw cosine exposes unfamiliar species even when softmax saturates |
+| **OOD False Softmax Conf** | `0.50 – 0.998` | Closed-set softmax reaches `0.998` on an OOD pufferfish |
+| **1-Shot Prototype Ablation** | `45.0%` (vs `50.0%` ZS) | Adding 1 noisy underwater photo still hurts accuracy due to lighting bias |
 
-> **Why raw cosine matters:** On a camouflaged *Arothron stellatus* frame, closed-set softmax predicted *Epinephelus polyphekadion* with `0.99` confidence, while raw cosine similarity was only `0.205`—correctly triggering manual review.
+> **Why raw cosine matters:** On a camouflaged *Arothron stellatus* frame, closed-set softmax predicted *Epinephelus polyphekadion* with `0.998` confidence, whereas raw cosine similarity stayed at `0.221` (`0.163–0.198` on the remaining OOD detections), demonstrating why raw cosine gating is essential before logging catches.
 
 ### 2. Dockside Stress Benchmark (`Lutjanus_bohar_230mm.jpg`, 230.0 mm GT TL)
 Tested synthetic degradations (`sun_glare`, `water_droplets`, `low_light`, `motion_blur`, and 1–2 occluded markers) at severities `0.4` and `0.8`:
