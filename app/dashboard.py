@@ -242,9 +242,9 @@ with tab_inspect:
             committed = st.session_state.setdefault("committed_inspections", {})
             saved_payload = committed.get(insp_id)
             if st.button(
-                    "Saved to Catch Ledger" if saved_payload else "Save Frame to Catch Ledger",
-                    type="primary",
-                    disabled=saved_payload is not None,
+                "Saved to Catch Ledger" if saved_payload else "Save Frame to Catch Ledger",
+                type="primary",
+                disabled=saved_payload is not None,
             ):
                 try:
                     commit_resp = httpx.post(
