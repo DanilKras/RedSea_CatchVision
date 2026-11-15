@@ -17,7 +17,7 @@ I built this project to explore how foundation vision models can automate docksi
 ![Field Stress Benchmark](docs/assets/stress_benchmark.png)
 *Synthetic robustness tests under glare, water droplets, low light, motion blur, and occluded markers.*
 
-
+![Perturbed Samples](docs/assets/perturbed.png)
 </details>
 
 ---
@@ -49,14 +49,14 @@ Tested on unconstrained underwater iNaturalist photos across **10 Red Sea specie
 
 > **Why raw cosine matters:** On a camouflaged *Arothron stellatus* frame, closed-set softmax predicted *Epinephelus polyphekadion* with `0.99` confidence, while raw cosine similarity was only `0.205`—correctly triggering manual review.
 
-### 2. Dockside Stress Benchmark (`synthetic_tilted.jpg`, 150.0 mm GT TL)
+### 2. Dockside Stress Benchmark (`Lutjanus_bohar_230mm.jpg`, 230.0 mm GT TL)
 Tested synthetic degradations (`sun_glare`, `water_droplets`, `low_light`, `motion_blur`, and 1–2 occluded markers) at severities `0.4` and `0.8`:
 
 | Metric | Result | Notes |
 | :--- | :---: | :--- |
-| **Calibration Success** | **100%** | Fallback to marker corners handles up to 2 occluded markers |
-| **Mean Length Error (MAPE)** | **0.41%** (`~0.6 mm` MAE) | Well below the 2% field target |
-| **Species Consistency** | **100%** | Consistent predictions across tested lighting/blur runs |
+| **Calibration Success** | **100%** (11/12 scenarios) | Handles glare, droplets, low light, and up to 2 occluded markers; fails only at extreme motion blur (`0.8`) |
+| **Mean Length Error (MAPE)** | **2.59% – 3.75%** (`6.0 – 8.7 mm` MAE) | Stable geodesic TL estimation across all calibrated perturbations |
+| **Species Consistency** | **100%** (11/12 scenarios) | Consistent *Lutjanus bohar* identification even when extreme blur disables ArUco calibration |
 
 ---
 
@@ -71,7 +71,7 @@ Tested synthetic degradations (`sun_glare`, `water_droplets`, `low_light`, `moti
 ## Quickstart
 
 ```bash
-git clone https://github.com/DanilKras/RedSea_CatchVision.git
+git clone [https://github.com/DanilKras/RedSea_CatchVision.git](https://github.com/DanilKras/RedSea_CatchVision.git)
 cd RedSea_CatchVision
 
 # Start Streamlit UI (:8501), FastAPI (:8000), and MLflow (:5000)

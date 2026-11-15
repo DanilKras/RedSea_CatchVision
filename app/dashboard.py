@@ -70,7 +70,7 @@ def fetch_ledger(base_url: str, limit: int = 100) -> dict[str, list[dict[str, ob
 
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_benchmark_summary(base_url: str) -> dict[str, object]:
-    resp = httpx.get(f"{base_url}/api/v1/benchmark", timeout=10.0)
+    resp = httpx.get(f"{base_url}/api/v1/benchmark", timeout=15.0)
     resp.raise_for_status()
     return resp.json()
 
@@ -366,7 +366,7 @@ with tab_bench:
                             "scenarios": selected_scenarios,
                             "severities": sev_choice or [0.4],
                         },
-                        timeout=300.0,
+                        timeout=1200.0,
                     )
                     b_resp.raise_for_status()
                     fetch_benchmark_summary.clear()
@@ -389,26 +389,37 @@ with tab_bench:
         st.dataframe(bench_summary, use_container_width=True, hide_index=True)
 
         c_l, c_r = st.columns(2)
+        plot_df = bench_summary.copy()
+        plot_df["severity"] = plot_df["severity"].astype(str)
         with c_l:
             fig_err = px.bar(
-                bench_summary,
+                plot_df,
                 x="scenario",
                 y="mape_length_pct",
                 color="severity",
                 barmode="group",
-                labels={"scenario": "Scenario", "mape_length_pct": "Length Error (%)"},
+                labels={
+                    "mape_length_pct": "Length Error (%)",
+                    "scenario": "",
+                    "severity": "Severity",
+                },
                 title="Metric Sizing Error (MAPE %)",
             )
             fig_err.add_hline(y=2.0, line_dash="dash", line_color="red")
             st.plotly_chart(style_plotly(fig_err), use_container_width=True)
         with c_r:
             fig_conf = px.bar(
-                bench_summary,
+                plot_df,
                 x="scenario",
                 y="mean_cls_conf",
                 color="severity",
                 barmode="group",
-                labels={"scenario": "Scenario", "mean_cls_conf": "Mean Confidence"},
+                range_y=[0, 1.05],
+                labels={
+                    "mean_cls_conf": "Mean Confidence",
+                    "scenario": "",
+                    "severity": "Severity",
+                },
                 title="BioCLIP Top-1 Confidence",
             )
             st.plotly_chart(style_plotly(fig_conf), use_container_width=True)
